@@ -165,6 +165,7 @@ query($cursor:String! ) {
         for user in users:
             user_row = list()
             if(user['node']):
+<<<<<<< HEAD
                 user_row = ghparse_row(user,"node*login", "node*name", "node*email", "node*company", "node*bio", "node*location",
                                        "node*createdAt", "node*isHireable", "node*followers*totalCount", "node*following*totalCount",
                                        "node*repositories*totalCount")
@@ -177,6 +178,14 @@ query($cursor:String! ) {
                     user_row.append(user['node']['sponsorshipsAsMaintainer']['totalCount'])
                     user_row.append(user['node']['sponsorshipsAsMaintainer']['nodes'])
                 else: user_row.append("")
+=======
+                print(user['node']['name'])
+                if user['node']['sponsorsListing']:
+                    print(user['node']['name']," ",user['node']['sponsorsListing']['createdAt'])
+                user_row.append(user['node']['name'])
+                user_row.append(user['node']['location'])
+                user_row.append(user['node']['sponsorsListing']['createdAt'])
+>>>>>>> parent of b186943 (Runnig code need checks)
             appendrowindf(user_xl, user_row)
         
 
