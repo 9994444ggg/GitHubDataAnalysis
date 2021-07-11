@@ -252,6 +252,8 @@ def main():
     other_stripe = ['fr','germany','switzerland','zurich','bern','geneva','japan']
     world = ['frankfurt','hamburg','cologne','Stuttgart','tokyo','kyoto','australia','sydney','perth','melbourne','zealand','singapore','hong kong','hk','sar','world','earth','global','worldwide','multiple','europe','thailand']
     rand =['']
+    state_abb = ['AL','MO', 'AK',  'MT', 'AZ', 'NE', 'AR', 'NV', 'NH', 'CO',  'NJ', 'CT', 'NM', 'DE',  'NY', 'DC', 'NC', 'FL',  'ND', 'GA', 'OH', 'HI', 'OK', 'ID', 'OR', 'IL', 'PA', 'IN', 'RI', 'IA', 'SC',
+                 'KS', 'SD', 'KY', 'TN', 'LA','TX', 'ME', 'UT', 'MD', 'VT', 'MA', 'VA', 'MI', 'WA', 'MN', 'WV', 'MS', 'WI', 'WY']
     year=['2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018']
     month = [['01'],['01','06'],['01','04','07','10'],['01','03','05','07','09','11'],['01','02','03','04','05','06','07','08','09','10','11','12']]
     for loc in rand:

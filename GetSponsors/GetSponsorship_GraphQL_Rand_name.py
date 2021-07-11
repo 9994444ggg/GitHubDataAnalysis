@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 import requests
 
-MAX_ROWS_PERWRITE = 1000
+MAX_ROWS_PERWRITE = 5000
 
 DF_REPO = pd.DataFrame()
 DF_COUNT = 0
@@ -56,7 +56,6 @@ def run_query(rep, period,user_xl):
         endc = req_json['data']['search']['pageInfo']['startCursor']
     except:
         print("Error getting starting cursor")
-        print(req_json)
         return 404
     
     end = False
@@ -138,16 +137,16 @@ query($cursor:String! ) {
             request = requests.post('https://api.github.com/graphql', json=body, headers=headers)
             req_json = request.json()
             print(rep," ",period," ",req_json['data']['search']['userCount'] )
-            if  int(req_json['data']['search']['userCount']) > 1000:
-                # log if the total user count is greater than 1000
-                with open(LOG_CSV, 'at') as logobj:                    
-                    log = csv.writer(logobj)
-                    l_data = list()
-                    l_data.append("Search Results Exceeds 1000")
-                    l_data.append(rep)
-                    l_data.append(period)
-                    l_data.append(req_json['data']['search']['userCount'])
-                    log.writerow(l_data)
+            # if  int(req_json['data']['search']['userCount']) > 1000:
+            #     # log if the total user count is greater than 1000
+            #     with open(LOG_CSV, 'at') as logobj:                    
+            #         log = csv.writer(logobj)
+            #         l_data = list()
+            #         l_data.append("Search Results Exceeds 1000")
+            #         l_data.append(rep)
+            #         l_data.append(period)
+            #         l_data.append(req_json['data']['search']['userCount'])
+            #         log.writerow(l_data)
             print(req_json['data']['rateLimit']['remaining'])
         except:
             print("Error running graphql")
@@ -224,80 +223,33 @@ def main():
     """Main function"""   
     global DF_REPO 
     global DF_COUNT
-    search_key = [ 'Alabama','Alaska','Arizona','Arkansas','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii',
-                'Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts',
-                'Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey',
-                'New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania',
-                'Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington',
-                'West Virginia','Wisconsin','Wyoming']
-    country =  ['us','usa','states','america','canada','california','ca']
-    states = [ 'Alabama','Alaska','Arizona','Arkansas','Colorado','Connecticut','Delaware','Florida','Georgia','Hawaii',
-                'Idaho','Illinois','Indiana','Iowa','Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts',
-                'Michigan','Minnesota','Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey',
-                'New Mexico','New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania',
-                'Rhode Island','South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington',
-                'West Virginia','Wisconsin','Wyoming']
-    europe = ['AUSTRIA','BELGIUM','brussels','BULGARIA','CROATIA','CYPRUS','CZECH','DENMARK','copenhagen','ESTONIA','FINLAND','FRANCE','paris','fr',
-              'GERMANY','berlin','munich','GREECE','athens','HUNGARY','IRELAND','dublin','ITALY','rome','LATVIA','LITHUANIA','LUXEMBOURG','MALTA','NETHERLANDS', 'amsterdam','rotterdam','POLAND',
-              'PORTUGAL','lisbon','porto','ROMANIA','SLOVAK','SLOVENIA','SPAIN','madrid','barcelona','SWEDEN','UNITED KINGDOM','uk','britan','england','scotland','wales','london','northern ireland']
-    other_stripe = ['fr','germany','switzerland','zurich','bern','geneva','japan']
-    world = ['frankfurt','hamburg','cologne','Stuttgart','tokyo','kyoto','australia','sydney','perth','melbourne','zealand','singapore','hong kong','hk','sar','world','earth','global','worldwide','multiple','europe','thailand']
-    rand =[':>100',':95..100',':90..95',':85..90',':80..85',':70..75',':75..80',':65..70',':60..65',':55..60',':50..55',
-           ':45..50',':40..45',':38..40',':36..38',':34..36',':28..30',':26..28',':32',':33',':34',':30',':31','32',':20',
-           ':21',':22',':23',':24',':25',':19',':18',':17',]
-    rand2 =[':16',':15']
-    state_abb = ['AL','MO', 'AK',  'MT', 'AZ', 'NE', 'AR', 'NV', 'NH', 'CO',  'NJ', 'CT', 'NM', 'DE',  'NY', 'DC', 'NC', 'FL',  'ND', 'GA', 'OH', 'HI', 'OK', 'ID', 'OR', 'IL', 'PA', 'IN', 'RI', 'IA', 'SC',
-                 'KS', 'SD', 'KY', 'TN', 'LA','TX', 'ME', 'UT', 'MD', 'VT', 'MA', 'VA', 'MI', 'WA', 'MN', 'WV', 'MS', 'WI', 'WY']
-    year=['2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018']
-    month = [['01'],['01','06'],['01','04','07','10'],['01','03','05','07','09','11'],['01','02','03','04','05','06','07','08','09','10','11','12']]
-    for rep in rand2:
-        user_xl = r'C:\\Users\pmedappa\Dropbox\Course and Research Sharing\Research\MS Acquire Github\Data\Sponsor\Rand\UserSponsor_'+re.sub('\W+','', rep)+'.xlsx'
+    for ln in login:
+        user_xl = r'C:\\Users\pmedappa\Dropbox\Course and Research Sharing\Research\MS Acquire Github\Data\Sponsor\Login\UserSponsor_login.xlsx'
         df_test = pd.DataFrame()
         df_test.to_excel(user_xl, index = False) 
         # for p in period:
         #     ret_val = run_query(loc, p,user_xl)         
-        for y in range(len(year)):  
-            cursor, i_m = find_i_split(rep,year[y])
-            print("Split found ", month[i_m])
-            if int(i_m) == 404: 
-                print("Ending .........")
-                return
-            for m in range(len(month[i_m])):        
-                if m != len(month[i_m])-1:
-                    if i_m == 4:
-                        p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+month[i_m][m]+'-15'
-                        ret_val = run_query(rep, p,user_xl)
-                        p = year[y]+'-'+month[i_m][m]+'-15..'+year[y]+'-'+month[i_m][m+1]+'-01'
-                    else: 
-                        p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+month[i_m][m+1]+'-01'
-                else: 
-                    if i_m == 4:
-                        p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+month[i_m][m]+'-15'
-                        ret_val = run_query(rep, p,user_xl)
-                        p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+'12'+'-31'
-                    else:
-                        p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+'12'+'-31'
-                ret_val = run_query(rep, p,user_xl)
+        ret_val = run_query(rep, p,user_xl)
 
                         
-        if DF_COUNT < MAX_ROWS_PERWRITE:
-            df = pd.read_excel(user_xl,error_bad_lines=False,header= 0, index = False)
-            df= df.append(DF_REPO, ignore_index = True)
-            df.to_excel(user_xl, index = False) 
-            DF_COUNT = 0
-            DF_REPO = pd.DataFrame()
-        
-         
+    if DF_COUNT < MAX_ROWS_PERWRITE:
         df = pd.read_excel(user_xl,error_bad_lines=False,header= 0, index = False)
-        if df.shape[1] > 10:
-            consolidate_sponsors = r'C:\\Users\pmedappa\Dropbox\Course and Research Sharing\Research\MS Acquire Github\Data\Sponsor\Rand\ConsolidatedSponsors.xlsx'       
-            df_con = pd.read_excel(consolidate_sponsors,error_bad_lines=False,header= 0, index = False)
-            df_con= df_con.append(df.dropna(subset=[11]), ignore_index=True)
-            # df_con.columns=["login", "name", "email", "company", "bio", "location",
-            #                            "createdAt", "isHireable", "followers_totalCount", "following_totalCount","repositories_totalCount",
-            #                            "sponsorsListing_createdAt","sponsorsListing_shortDescription","sponsorsListing_name",
-            #                            "sponsorsListing_tiers_totalCount","sponsorsListing_tiers_edges","sponsorshipsAsMaintainer_totalCount",
-            #                            "sponsorshipsAsMaintainer_nodes"]
-            df_con.to_excel(consolidate_sponsors, index = False)  
+        df= df.append(DF_REPO, ignore_index = True)
+        df.to_excel(user_xl, index = False) 
+        DF_COUNT = 0
+        DF_REPO = pd.DataFrame()
+    
+     
+    df = pd.read_excel(user_xl,error_bad_lines=False,header= 0, index = False)
+    if df.shape[1] > 10:
+        consolidate_sponsors = r'C:\\Users\pmedappa\Dropbox\Course and Research Sharing\Research\MS Acquire Github\Data\Sponsor\Rand\ConsolidatedSponsors.xlsx'       
+        df_con = pd.read_excel(consolidate_sponsors,error_bad_lines=False,header= 0, index = False)
+        df_con= df_con.append(df.dropna(subset=[11]), ignore_index=True)
+        # df_con.columns=["login", "name", "email", "company", "bio", "location",
+        #                            "createdAt", "isHireable", "followers_totalCount", "following_totalCount","repositories_totalCount",
+        #                            "sponsorsListing_createdAt","sponsorsListing_shortDescription","sponsorsListing_name",
+        #                            "sponsorsListing_tiers_totalCount","sponsorsListing_tiers_edges","sponsorshipsAsMaintainer_totalCount",
+        #                            "sponsorshipsAsMaintainer_nodes"]
+        df_con.to_excel(consolidate_sponsors, index = False)  
     
 main()

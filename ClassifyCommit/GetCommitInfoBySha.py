@@ -16,10 +16,10 @@ from poo_ghmodules import getGitHubapi
 from poo_ghmodules import ghparse_row
 
 
-TRAIN_CSV = 'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Commit Creativity - Train3.csv'
-PW_CSV = 'C:\\Users\pmedappa\Dropbox\HEC\Python\PW\PW_GitHub3.csv'
-LOG_CSV = 'C:\\Data\\092019 CommitInfo\RepoCommit_log.csv'
-NEWREPO_xl = 'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/New Commit Creativity - Train3.xlsx'
+TRAIN_CSV = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Java Commit Creativity - Full.csv'
+PW_CSV = r'C:\\Users\pmedappa\Dropbox\HEC\Python\PW\PW_GitHub.csv'
+LOG_CSV = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML\RepoCommit_log.csv'
+NEWREPO_xl = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Java Commit Labels.xlsx'
 
 
 with open(TRAIN_CSV, 'rt', encoding = 'latin-1') as rdobj:
@@ -40,7 +40,9 @@ with open(TRAIN_CSV, 'rt', encoding = 'latin-1') as rdobj:
 
             else:
                 print("Error getting commit info ",commit_url)
-                commit_row.append('','',',')
+                commit_row.append('')
+                commit_row.append('')
+                commit_row.append('')
                 commit_row[-1] = len(commit_row[-1])
                 df = df.append(pd.Series(commit_row),sort = False, ignore_index = True)
 

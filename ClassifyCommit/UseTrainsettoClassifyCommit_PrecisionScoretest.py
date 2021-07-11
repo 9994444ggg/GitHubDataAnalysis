@@ -19,9 +19,10 @@ from sklearn.ensemble import RandomForestClassifier
 from scipy.sparse import hstack
 import matplotlib.pyplot as plt
 from sklearn.model_selection import learning_curve
+from sklearn.metrics import f1_score
 
-
-TRAIN_CSV = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Commit Creativity - Train3_Details.xlsx'
+TRAIN_CSV = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Commit Creativity - Train_Details_WithJava.xlsx'
+#TRAIN_CSV = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Commit Creativity - Train3_Details.xlsx' # without java
 TRAIN_SET = r'C:/Users/pmedappa/Dropbox\\Data\\092019 CommitInfo\Classifiers\Classifier 66 62\Trainset.xlsx'
 TEST_SET = r'C:/Users/pmedappa/Dropbox\\Data\\092019 CommitInfo\Classifiers\Classifier 66 62\Testset.xlsx'
 LABELFULL_CSV = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Trainout.csv'
@@ -221,8 +222,10 @@ def MLPmodel(train_x, train_y, test_x, test_y, LCurve = False):
     n = nn.fit(train_x, train_y)
     p_train = n.predict_proba(train_x)
     p_test = n.predict_proba(test_x)
+    pred_test = n.predict(test_x)
     acc = n.score(test_x,test_y)
     print("accuracy is = ",  acc)
+    print('f1 ', f1_score(test_y, pred_test, average='macro'))
     if LCurve: plot_learning_curve_std(nn, train_x, train_y)
     return p_train, p_test, acc, n
 
@@ -244,9 +247,9 @@ def main():
     # Save the full labeled data sample post processing in CSV
     # vector_dataframe.to_csv(LABELFULL_CSV)
     #Split vector data frame into training and test samples
-    # df_train, df_test = train_test_split(vector_dataframe, test_size=0.2)
-    df_train = pd.read_excel(TRAIN_SET, sep=",",error_bad_lines=False,header= 0)
-    df_test = pd.read_excel(TEST_SET, sep=",",error_bad_lines=False,header= 0)
+    df_train, df_test = train_test_split(vector_dataframe, test_size=0.2)
+#    df_train = pd.read_excel(TRAIN_SET, sep=",",error_bad_lines=False,header= 0) #Use pre trainset
+#    df_test = pd.read_excel(TEST_SET, sep=",",error_bad_lines=False,header= 0)
 
     #Reset the indices for merging other features later on
     df_train=df_train.reset_index()
@@ -262,13 +265,13 @@ def main():
     df_classify = pd.DataFrame()
     df_write = pd.DataFrame()
 
-    df_write = pd.read_excel(COMMIT_XLSX,error_bad_lines=False,header=0)
-    print(COMMIT_XLSX," rows ",df_write.shape[0])
+#    df_write = pd.read_excel(COMMIT_XLSX,error_bad_lines=False,header=0)
+#    print(COMMIT_XLSX," rows ",df_write.shape[0])
 
-    dataframe_classify = df_write.apply(geticommit, axis =1 )
-
-    dataframe_classify = dataframe_classify.assign(nWords = lambda x : x['Message'].str.split().str.len() )
-    word_features = word_vectorizer.transform(dataframe_classify['Message'].astype(str))
+#    dataframe_classify = df_write.apply(geticommit, axis =1 )
+#
+#    dataframe_classify = dataframe_classify.assign(nWords = lambda x : x['Message'].str.split().str.len() )
+#    word_features = word_vectorizer.transform(dataframe_classify['Message'].astype(str))
     
     for i in ["Novelty", "Usefulness"]:
         '''MLPClassifier'''
@@ -304,23 +307,23 @@ def main():
         print("MLP Classifier - Two stage - "+i+"3 ", acc)
     
         # USE 1S-5p, 2S - 3p MLP classifier for classifying the commits
-        p_classify5 = classifier_mlp1s5.predict_proba(word_features)
-        df_classify_prob = pd.DataFrame(p_classify5, columns = [i+'p1',i+'p2',i+'p3',i+'p4',i+'p5'])
-        classify_x_s1 = pd.DataFrame(pd.concat([df_classify_prob,dataframe_classify['Files'],dataframe_classify['Added'],dataframe_classify['Deleted'],dataframe_classify['Parents'],dataframe_classify['nWords']], axis=1) ).fillna(0)
-        p_classify_s2  = classifier_mlp2s5.predict_proba(classify_x_s1)
-        classify_x_s2  = pd.DataFrame(p_classify_s2, columns = [i+'s2p1',i+'s2p2',i+'s2p3'])
+#        p_classify5 = classifier_mlp1s5.predict_proba(word_features)
+#        df_classify_prob = pd.DataFrame(p_classify5, columns = [i+'p1',i+'p2',i+'p3',i+'p4',i+'p5'])
+#        classify_x_s1 = pd.DataFrame(pd.concat([df_classify_prob,dataframe_classify['Files'],dataframe_classify['Added'],dataframe_classify['Deleted'],dataframe_classify['Parents'],dataframe_classify['nWords']], axis=1) ).fillna(0)
+#        p_classify_s2  = classifier_mlp2s5.predict_proba(classify_x_s1)
+#        classify_x_s2  = pd.DataFrame(p_classify_s2, columns = [i+'s2p1',i+'s2p2',i+'s2p3'])
         
-        df_classify = pd.concat([df_classify, classify_x_s2], axis=1)
+#        df_classify = pd.concat([df_classify, classify_x_s2], axis=1)
         
         macc = max(acuracy, key=lambda x: x[1])
-        print("MAX ACCURACY - = ",macc)
+#        print("MAX ACCURACY - = ",macc)
         macc_l.append([macc[0],macc[1],macc[2]]) 
     
-    print(df_write.shape[0],df_classify.shape[0])
-    df_write = pd.concat([df_write,df_classify], axis=1)
-    print(df_write.shape[0])
-    df_write.to_excel(COMMIT2_XLSX)   
-    print(macc_l)
+#    print(df_write.shape[0],df_classify.shape[0])
+#    df_write = pd.concat([df_write,df_classify], axis=1)
+#    print(df_write.shape[0])
+#    df_write.to_excel(COMMIT2_XLSX)   
+#    print(macc_l)
 
 if __name__ == '__main__':
   main()

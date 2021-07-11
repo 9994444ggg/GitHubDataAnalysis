@@ -17,7 +17,7 @@ import pandas as pd
 import numpy as np
 import requests
 
-MAX_ROWS_PERWRITE = 1000
+MAX_ROWS_PERWRITE = 5000
 
 DF_REPO = pd.DataFrame()
 DF_COUNT = 0
@@ -56,7 +56,6 @@ def run_query(rep, period,user_xl):
         endc = req_json['data']['search']['pageInfo']['startCursor']
     except:
         print("Error getting starting cursor")
-        print(req_json)
         return 404
     
     end = False
@@ -138,16 +137,16 @@ query($cursor:String! ) {
             request = requests.post('https://api.github.com/graphql', json=body, headers=headers)
             req_json = request.json()
             print(rep," ",period," ",req_json['data']['search']['userCount'] )
-            if  int(req_json['data']['search']['userCount']) > 1000:
-                # log if the total user count is greater than 1000
-                with open(LOG_CSV, 'at') as logobj:                    
-                    log = csv.writer(logobj)
-                    l_data = list()
-                    l_data.append("Search Results Exceeds 1000")
-                    l_data.append(rep)
-                    l_data.append(period)
-                    l_data.append(req_json['data']['search']['userCount'])
-                    log.writerow(l_data)
+            # if  int(req_json['data']['search']['userCount']) > 1000:
+            #     # log if the total user count is greater than 1000
+            #     with open(LOG_CSV, 'at') as logobj:                    
+            #         log = csv.writer(logobj)
+            #         l_data = list()
+            #         l_data.append("Search Results Exceeds 1000")
+            #         l_data.append(rep)
+            #         l_data.append(period)
+            #         l_data.append(req_json['data']['search']['userCount'])
+            #         log.writerow(l_data)
             print(req_json['data']['rateLimit']['remaining'])
         except:
             print("Error running graphql")
@@ -244,11 +243,12 @@ def main():
     world = ['frankfurt','hamburg','cologne','Stuttgart','tokyo','kyoto','australia','sydney','perth','melbourne','zealand','singapore','hong kong','hk','sar','world','earth','global','worldwide','multiple','europe','thailand']
     rand =[':>100',':95..100',':90..95',':85..90',':80..85',':70..75',':75..80',':65..70',':60..65',':55..60',':50..55',
            ':45..50',':40..45',':38..40',':36..38',':34..36',':28..30',':26..28',':32',':33',':34',':30',':31','32',':20',
-           ':21',':22',':23',':24',':25',':19',':18',':17',]
-    rand2 =[':16',':15']
+           ':21',':22',':23',':24',':25',':19',':18',':17',':16',':15',':>100',':14',':13',':12',':11',':10',':9',':8',':7',':6',':5',':4']
+    rand2 =[':3']
     state_abb = ['AL','MO', 'AK',  'MT', 'AZ', 'NE', 'AR', 'NV', 'NH', 'CO',  'NJ', 'CT', 'NM', 'DE',  'NY', 'DC', 'NC', 'FL',  'ND', 'GA', 'OH', 'HI', 'OK', 'ID', 'OR', 'IL', 'PA', 'IN', 'RI', 'IA', 'SC',
                  'KS', 'SD', 'KY', 'TN', 'LA','TX', 'ME', 'UT', 'MD', 'VT', 'MA', 'VA', 'MI', 'WA', 'MN', 'WV', 'MS', 'WI', 'WY']
-    year=['2008','2009','2010','2011','2012','2013','2014','2015','2016','2017','2018']
+    #'2008','2009','2010','2011','2012','2013','2014','2015','2016',
+    year=['2017','2018']
     month = [['01'],['01','06'],['01','04','07','10'],['01','03','05','07','09','11'],['01','02','03','04','05','06','07','08','09','10','11','12']]
     for rep in rand2:
         user_xl = r'C:\\Users\pmedappa\Dropbox\Course and Research Sharing\Research\MS Acquire Github\Data\Sponsor\Rand\UserSponsor_'+re.sub('\W+','', rep)+'.xlsx'
@@ -265,16 +265,32 @@ def main():
             for m in range(len(month[i_m])):        
                 if m != len(month[i_m])-1:
                     if i_m == 4:
-                        p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+month[i_m][m]+'-15'
+                        p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+month[i_m][m]+'-05'
+                        ret_val = run_query(rep, p,user_xl)    
+                        p = year[y]+'-'+month[i_m][m]+'-06..'+year[y]+'-'+month[i_m][m]+'-10'
+                        ret_val = run_query(rep, p,user_xl)                        
+                        p = year[y]+'-'+month[i_m][m]+'-11..'+year[y]+'-'+month[i_m][m]+'-15'
                         ret_val = run_query(rep, p,user_xl)
-                        p = year[y]+'-'+month[i_m][m]+'-15..'+year[y]+'-'+month[i_m][m+1]+'-01'
+                        p = year[y]+'-'+month[i_m][m]+'-16..'+year[y]+'-'+month[i_m][m]+'-20'
+                        ret_val = run_query(rep, p,user_xl)
+                        p = year[y]+'-'+month[i_m][m]+'-21..'+year[y]+'-'+month[i_m][m]+'-25'
+                        ret_val = run_query(rep, p,user_xl)
+                        p = year[y]+'-'+month[i_m][m]+'-26..'+year[y]+'-'+month[i_m][m+1]+'-01'
                     else: 
                         p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+month[i_m][m+1]+'-01'
                 else: 
                     if i_m == 4:
-                        p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+month[i_m][m]+'-15'
+                        p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+month[i_m][m]+'-05'
                         ret_val = run_query(rep, p,user_xl)
-                        p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+'12'+'-31'
+                        p = year[y]+'-'+month[i_m][m]+'-06..'+year[y]+'-'+month[i_m][m]+'-10'
+                        ret_val = run_query(rep, p,user_xl)
+                        p = year[y]+'-'+month[i_m][m]+'-11..'+year[y]+'-'+month[i_m][m]+'-15'
+                        ret_val = run_query(rep, p,user_xl)
+                        p = year[y]+'-'+month[i_m][m]+'-16..'+year[y]+'-'+month[i_m][m]+'-20'
+                        ret_val = run_query(rep, p,user_xl)
+                        p = year[y]+'-'+month[i_m][m]+'-21..'+year[y]+'-'+month[i_m][m]+'-25'
+                        ret_val = run_query(rep, p,user_xl)
+                        p = year[y]+'-'+month[i_m][m]+'-26..'+year[y]+'-'+'12'+'-31'
                     else:
                         p = year[y]+'-'+month[i_m][m]+'-01..'+year[y]+'-'+'12'+'-31'
                 ret_val = run_query(rep, p,user_xl)

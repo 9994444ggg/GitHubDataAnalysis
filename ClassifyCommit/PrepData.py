@@ -8,8 +8,8 @@ Created on Sun Feb 16 00:07:14 2020
 
 import pandas as pd
 
-MC_XLSX = "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/MC_RepoCommit_Full2.xlsx"
-CLEAN_XLSX = "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/2nFinalCleanData_Full.xlsx"
+MC_XLSX = "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/28072020_MC_RepoCommit_Clean1.xlsx"
+CLEAN_XLSX = "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/28072020_FinalCleanData_Full_Clean1.xlsx"
 
 def main():
     pd.options.display.max_rows = 10
@@ -22,9 +22,9 @@ def main():
     df_mc = df_mc[df_mc['PINDEX'] != 'PINDEX']
     print(df_mc.shape[0])
     
-    df_mc = df_mc.drop(axis=1,columns=['PUSHED_0917', 'STARS_0917', 'SUBSCRIBERS_0917', 'FORKS_0917', 'SIZE_0917', 'LICENCE_0917', 'PUSHED_1017', 'STARS_1017', 'SUBSCRIBERS_1017', 'FORKS_1017', 
-                                       'SIZE_1017', 'LICENCE_1017', 'int_sup', 'int_sup_sq', 'month_jan_flag', 'month_feb_flag', 'month_mar_flag', 'month_apr_flag', 'month_may_flag', 'month_jun_flag',
-                                       'script_size_kb', 'script_size_mb', 'logsize_kb'])
+#    df_mc = df_mc.drop(axis=1,columns=['PUSHED_0917', 'STARS_0917', 'SUBSCRIBERS_0917', 'FORKS_0917', 'SIZE_0917', 'LICENCE_0917', 'PUSHED_1017', 'STARS_1017', 'SUBSCRIBERS_1017', 'FORKS_1017', 
+#                                       'SIZE_1017', 'LICENCE_1017', 'int_sup', 'int_sup_sq', 'month_jan_flag', 'month_feb_flag', 'month_mar_flag', 'month_apr_flag', 'month_may_flag', 'month_jun_flag',
+#                                       'script_size_kb', 'script_size_mb', 'logsize_kb'])
     
 
     df_mc.iloc[:,:(df_mc.shape[1]-16)] = df_mc.iloc[:,:(df_mc.shape[1]-16)].fillna(method='ffill')

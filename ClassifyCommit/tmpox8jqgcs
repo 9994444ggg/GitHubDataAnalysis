@@ -19,14 +19,19 @@ from sklearn.ensemble import RandomForestClassifier
 from scipy.sparse import hstack
 import matplotlib.pyplot as plt
 from sklearn.model_selection import learning_curve
+from numpy import array
+from numpy import float32
+from sklearn.metrics import f1_score
 
+TRAIN_XL = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\JavaSampling\ML\LabelDatset.xlsx'
+TRAIN_XL_TEXT = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\JavaSampling\ML\LabelDatset_Text.xlsx'
+LABELFULL_XL = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\JavaSampling\ML\PreProcessed.xlsx'
+TRAINSET_XL = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\JavaSampling\ML\Trainset.xlsx'
+TESTSET_XL = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\JavaSampling\ML\Testset.xlsx'
 
-TRAIN_XL = 'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Commit Creativity - Train3_Details.xlsx'
-LABELFULL_CSV = 'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Trainout.csv'
-TRAINSET_XL = 'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Trainset.xlsx'
-TESTSET_XL = 'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Testset.xlsx'
-COMMIT_XLSX =r"C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo/testRepoCommit1_287_1.xlsx"
-COMMIT2_XLSX =r"C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo/uptestRepoCommit1_287_1.xlsx"
+CHECK_XL = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\JavaSampling\ML\CHECK.xlsx'
+CHECK1_XL = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\JavaSampling\ML\CHECK1.xlsx'
+CHECK2_XL = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\JavaSampling\ML\CHECK2.xlsx'
 
 def plot_learning_curve_std(estimator, X, y):
     """
@@ -132,9 +137,8 @@ def geticommit(x):
     
 def getVDF(TRAIN_XL):
     """Get data from the training sample CSV and perform various cleaning and data preprocessing"""
-    dataframe = pd.read_excel(TRAIN_XL)
+    dataframe = pd.read_excel(TRAIN_XL, header= 0)
 
-    dataframe = dataframe.drop(axis=1,columns=['Commit URL', 'Sha','URL','Author Name','Author Email','Commit Date','Verification','Author Date'])
     # Shuffle the dataframe
     dataframe = shuffle(dataframe)
     # Encode type of commit
@@ -146,15 +150,8 @@ def getVDF(TRAIN_XL):
                                                                        'Process': 5,
                                                                        'Testing': 6})
     dataframe = dataframe.drop(axis=1,columns=['Type of Commit (Primary)','Optional Type of Commit (Secondary)'])
-    # Find number of parents
-    dataframe['Parents'] = dataframe['Parents'].map(getnoelements)
-    # Convert the number of lines of code into nChanges, nAdditions, nDeletions
-    # Get total number of changes
-    dataframe = dataframe.assign(nChanges = lambda x : x['Lines of Code Changed'].str.split(':').str.get(1).str.split(',').str.get(0) )
-    # Get total number of additions
-    dataframe = dataframe.assign(nAdditions = lambda x : x['Lines of Code Changed'].str.split(':').str.get(2).str.split(',').str.get(0) )
-    # Get total number of deletions
-    dataframe = dataframe.assign(nDeletions = lambda x : x['Lines of Code Changed'].str.split(':').str.get(3).str.split('}').str.get(0) )
+    
+ 
     # Create three class labeld for novelty and usefulness
     conditions = [
         (dataframe['Novelty'] > 3),
@@ -168,10 +165,10 @@ def getVDF(TRAIN_XL):
     choices = ['High', 'Low']
     dataframe['Usefulness3'] = np.select(conditions, choices, default='Medium')
     #Create count of words feature
-    dataframe = dataframe.assign(nWords = lambda x : x['Description'].str.split().str.len() )
-    dataframe_sd = dataframe.drop(dataframe[dataframe.CommitType.astype(int) == 3].index)
+    dataframe = dataframe.assign(nWords = lambda x : x['C_Description'].str.split().str.len() )
+#    dataframe_sd = dataframe.drop(dataframe[dataframe.CommitType.astype(int) == 3].index)
 
-    return dataframe, dataframe_sd
+    return dataframe
 
 def vectordsc(corpus, train_text, test_text):
     """Convert the description text into ngram vector of features. Sparse matrix format"""
@@ -181,8 +178,8 @@ def vectordsc(corpus, train_text, test_text):
                                         analyzer='word',
                                         token_pattern=r'\w{1,}',
                                         stop_words='english',
-                                        ngram_range=(1, 2),
-                                        max_features=10000)
+                                        ngram_range=(1, 5),
+                                        max_features=1000)
 
     word_vectorizer.fit(corpus)
     train_word_features = word_vectorizer.transform(train_text)
@@ -199,8 +196,11 @@ def MLPmodel(train_x, train_y, test_x, test_y, LCurve = False):
     n = nn.fit(train_x, train_y)
     p_train = n.predict_proba(train_x)
     p_test = n.predict_proba(test_x)
+    pred_test = n.predict(test_x)
     acc = n.score(test_x,test_y)
     print("accuracy is = ",  acc)
+    print('f1 ', f1_score(test_y, pred_test, average='macro'))
+    
     if LCurve: plot_learning_curve_std(nn, train_x, train_y)
     return p_train, p_test, acc, n
 
@@ -215,131 +215,181 @@ def RFCmodel(train_x, train_y, test_x, test_y, LCurve = False):
     if LCurve: plot_learning_curve_std(rfc, train_x, train_y)
     return p_train, p_test, acc, r
 
+def organizevectors(df):
+    df['lVec2'] = np.array(df['VECTORS'].apply(lambda x : dict(eval(x))['f']))
+    df['lVec'] = df['VECTORS'].apply(lambda x : dict(eval(x))).apply(pd.Series)
+    
+    df= pd.concat([df,(df['lVec'].apply(pd.Series))], axis = 1)
+
+    return df
+    
 def main():
     pd.options.display.max_rows = 10
     pd.options.display.float_format = '{:.3f}'.format
-    vector_dataframe, vector_dataframe_sd = getVDF(TRAIN_XL)
-    # Save the full labeled data sample post processing in CSV
-    vector_dataframe.to_csv(LABELFULL_CSV)
+    vector_dataframe = getVDF(TRAIN_XL)
+    text_dataframe = getVDF(TRAIN_XL_TEXT)
+    vector_dataframe  = organizevectors(vector_dataframe)
+    df2 = pd.DataFrame()
+    list_c = [i for i in range(0,384)]
+    # list_c = ['lVec2']
+
+    list_o = ['C_Description','C_Author_Email','C_Additions','C_Author_Date','C_Commiter_Name','C_Comments','REPO_ID','C_Deletions',
+              'C_Commiter_Email','C_nParents','C_nFiles','Commit URL','Novelty','Usefulness','CommitType','Novelty3','Usefulness3',
+              'nWords']
+    # df2 = vector_dataframe
+    df2 = pd.DataFrame()
+    df2 = pd.concat([df2 ,vector_dataframe.groupby('SHA')[list_o].first()], axis=1)
+    df2 = pd.concat([df2 , vector_dataframe.groupby('SHA')[list_c].mean()], axis=1)
+    
+   # Save the full labeled data sample post processing in CSV
+#    vector_dataframe = vector_dataframe.drop_duplicates(subset = ['C_Description'])
+    df2.to_excel(CHECK_XL)
+    vector_dataframe.to_excel(LABELFULL_XL)
+    
     #Split vector data frame into training and test samples
-    df_train, df_test = train_test_split(vector_dataframe, test_size=0.2)
+    df_train, df_test = train_test_split(df2, test_size=0.1)
+    t_df_train, t_df_test = train_test_split(text_dataframe , test_size=0.2)
     #Reset the indices for merging other features later on
     df_train=df_train.reset_index()
     df_test = df_test.reset_index()
+    
+    t_df_train=t_df_train.reset_index()
+    t_df_test = t_df_test.reset_index()
     #Create new CSV represnting the training and testing samples
     df_train.to_excel(TRAINSET_XL)
     df_test.to_excel(TESTSET_XL)
     #Convert description text into a vetor of features. Train_x,test_x are in sparse matrix format
-    train_x, test_x, word_vectorizer = vectordsc(vector_dataframe['Description'], df_train['Description'], df_test['Description'] )
-    acuracy = list()
-    macc = list()
-    macc_l = list()
-    df_classify = pd.DataFrame()
-    df_write = pd.read_excel(COMMIT_XLSX)
-    dataframe_classify = df_write.apply(geticommit, axis =1 )
-    dataframe_classify = dataframe_classify.assign(nWords = lambda x : x['Message'].str.split().str.len() )
-    word_features = word_vectorizer.transform(dataframe_classify['Message'].astype(str))
+    #Use different file since number of textual descriptions available is greater 
+    t_train_x, t_test_x, word_vectorizer = vectordsc(df2['C_Description'], df_train['C_Description'], df_test ['C_Description'] )
+
+
+
+    # for i in ["Novelty", "Usefulness"]:
+    #     '''MLPClassifier'''
+    #     print("************ TEXT ONLY *************")
+    #     print("************ MLP Classifier *************")
+
+    #     #Stage 1  
+    #     print("*** MLP Classifier - One stage - "+i+"5 ***")
+    #     print("*** TEXT ***")
+    #     tp_train5,tp_test5, acc, classifier_mlp1s5 = MLPmodel(t_train_x, t_df_train[i], t_test_x, t_df_test[i])
+    #     print(tp_train5)
+    #     print("*** MLP Classifier - One stage - "+i+"3 ***")
+    #     print("*** TEXT ***")
+    #     tp_train3,tp_test3, acc, classifier_mlp1s3 = MLPmodel(t_train_x, t_df_train[i+'3'], t_test_x, t_df_test[i+'3'])
+        
 
     for i in ["Novelty", "Usefulness"]:
         '''MLPClassifier'''
+        print("************ CODE + META DATA *************")
         print("************ MLP Classifier *************")
-        del acuracy[:] 
-        del macc[:] 
         #Stage 1  
         print("*** MLP Classifier - One stage - "+i+"5 ***")
-        p_train5,p_test5, acc, classifier_mlp1s5 = MLPmodel(train_x, df_train[i], test_x, df_test[i])
-        #Stage 2
-        df_train_prob = pd.DataFrame(p_train5, columns = ['p1','p2','p3','p4','p5'])
-        train_x_s2 = pd.concat([df_train_prob,df_train['Files Changed'],df_train['nAdditions'],df_train['nDeletions'],df_train['Parents'],df_train['nWords']], axis=1)
-        df_test_prob = pd.DataFrame(p_test5, columns = ['p1','p2','p3','p4','p5'])
-        test_x_s2 = pd.concat([df_test_prob,df_test['Files Changed'],df_test['nAdditions'],df_test['nDeletions'],df_test['Parents'],df_test['nWords']], axis=1)
-        print("*** MLP Classifier - Two stage - "+i+"5 ***")
-        p_train_s2,p_test_s2, acc, classifier_mlp2s5 = MLPmodel(train_x_s2, df_train[i+'3'], test_x_s2, df_test[i+'3'], LCurve = False)
-        acuracy.append(["MLP Classifier - Two stage - "+i+"5", float(acc),classifier_mlp1s5, classifier_mlp2s5])
-        print("MLP Classifier - Two stage - "+i+"5 ", acc)
+        # c_vec_train = organizevectors(df_train)
+        c_vec_train = df_train[list_c]
+        c_vec_train = c_vec_train.assign(C_Additions = df_train['C_Additions'] )
+        c_vec_train = c_vec_train.assign(C_Deletions = df_train['C_Deletions'] )
+        c_vec_train = c_vec_train.assign(C_nParents = df_train['C_nParents'] )
+        c_vec_train = c_vec_train.assign(C_nFiles = df_train['C_nFiles'] )
+        c_vec_train = c_vec_train.assign(nWords = df_train['nWords'] )
 
-
+        c_vec_test = df_test[list_c]
+        
+        c_vec_test = c_vec_test.assign(C_Additions = df_train['C_Additions'] )
+        c_vec_test = c_vec_test.assign(C_Deletions = df_train['C_Deletions'] )
+        c_vec_test = c_vec_test.assign(C_nParents = df_train['C_nParents'] )
+        c_vec_test = c_vec_test.assign(C_nFiles = df_train['C_nFiles'] )
+        c_vec_test = c_vec_test.assign(nWords = df_train['nWords'] )
+        
+        vp_train5,vp_test5, acc, classifier_mlp1s5_vec = MLPmodel(c_vec_train, df_train[i], c_vec_test, df_test[i])
+     
         print("*** MLP Classifier - One stage - "+i+"3 ***")
-        p_train3,p_test3, acc, classifier_mlp1s3 = MLPmodel(train_x, df_train[i+'3'], test_x, df_test[i+'3'])
-        acuracy.append(["MLP Classifier - One stage - "+i+"3", float(acc), classifier_mlp1s3])
-        
-        #Stage 2
-        df_train_prob = pd.DataFrame(p_train3, columns = ['p1','p2','p3'])
-        train_x_s2 = pd.concat([df_train_prob,df_train['Files Changed'],df_train['nAdditions'],df_train['nDeletions'],df_train['Parents'],df_train['nWords']], axis=1)
-        df_test_prob = pd.DataFrame(p_test3, columns = ['p1','p2','p3'])
-        test_x_s2 = pd.concat([df_test_prob,df_test['Files Changed'],df_test['nAdditions'],df_test['nDeletions'],df_test['Parents'],df_test['nWords']], axis=1)
-        print("*** MLP Classifier - Two stage - "+i+"3 ***")
-        p_train_s2,p_test_s2, acc, classifier_mlp2s3 = MLPmodel(train_x_s2, df_train[i+'3'], test_x_s2, df_test[i+'3'], LCurve = False)
-        acuracy.append(["MLP Classifier - Two stage - "+i+"3", float(acc),classifier_mlp1s3, classifier_mlp2s3])
-        print("MLP Classifier - Two stage - "+i+"3 ", acc)
 
-        #Stage 2 in RF Model
-#        print("*** MLP stage one, RF stage two classifier - Two stage - "+i+"3 ***")
-#        p_train_s2,p_test_s2, acc, classifier = RFCmodel(train_x_s2, df_train[i+'3'], test_x_s2, df_test[i+'3'], LCurve = False)
-#        acuracy.append(["MLP stage one, RF stage two classifier - Two stage - "+i+"3", float(acc), classifier])
+        tp2_train3,tp2_test3, acc, classifier_mlp1s5 = MLPmodel(c_vec_train,  df_train[i+'3'], c_vec_test, df_test[i+'3'])
+
+    for i in ["Novelty", "Usefulness"]:
+        '''MLPClassifier'''
+        print("************ TEXT ONLY *************")
+        print("************ MLP Classifier - One Stage - "+i+"5 *** *************")
+        train_text_vec= word_vectorizer.transform(df_train['C_Description'])
+        test_text_vec = word_vectorizer.transform(df_test['C_Description'])
+        tp_train5,tp_test5, acc, classifier_mlp1s5_vec = MLPmodel(train_text_vec, df_train[i], test_text_vec , df_test[i])
+        text_train_prob = pd.DataFrame(tp_train5, columns = ['p1','p2','p3','p4','p5'])
+        text_test_prob = pd.DataFrame(tp_test5, columns = ['p1','p2','p3','p4','p5'])
+     
+        print("************ CODE ONLY *************") 
+        print("*** MLP Classifier - One stage - "+i+"5 ***")
+        
+        c_vec_train = df_train[list_c]
+        c_vec_test = df_test[list_c]
+
+        vp_train5,vp_test5, acc, classifier_mlp1s5_vec = MLPmodel(c_vec_train, df_train[i], c_vec_test, df_test[i])                
+        code_train_prob = pd.DataFrame(vp_train5, columns = ['cp1','cp2','cp3','cp4','cp5'])
+        code_test_prob = pd.DataFrame(vp_test5, columns = ['cp1','cp2','cp3','cp4','cp5'])  
+        
+        print("*** MLP Classifier - One stage - "+i+"3 ***")
+        print("*** CODE ***")
+        tp2_train3,tp2_test3, acc, classifier_mlp1s5 = MLPmodel(c_vec_train,  df_train[i+'3'], c_vec_test, df_test[i+'3'])        
+        
+        
+        print("************ META DATA ONLY *************") 
+        print("*** MLP Classifier - One stage - "+i+"5 ***")
+        
+        m_vec_train = pd.DataFrame()
+        m_vec_test = pd.DataFrame()
+
+        m_vec_train = m_vec_train.assign(C_Additions = df_train['C_Additions'] )
+        m_vec_train = m_vec_train.assign(C_Deletions = df_train['C_Deletions'] )
+        m_vec_train = m_vec_train.assign(C_nParents = df_train['C_nParents'] )
+        m_vec_train = m_vec_train.assign(C_nFiles = df_train['C_nFiles'] )
+        m_vec_train = m_vec_train.assign(nWords = df_train['nWords'] )
+         
+        m_vec_test = m_vec_test.assign(C_Additions = df_test['C_Additions'] )
+        m_vec_test = m_vec_test.assign(C_Deletions = df_test['C_Deletions'] )
+        m_vec_test = m_vec_test.assign(C_nParents = df_test['C_nParents'] )
+        m_vec_test = m_vec_test.assign(C_nFiles = df_test['C_nFiles'] )
+        m_vec_test = m_vec_test.assign(nWords = df_test['nWords'] )        
+
+
+        print("************ CODE  + TEXT *************")         
+        print("*** Stage Two - Text + Code  - "+i+"5 ***")
+
+        
+        tc_vec_train = pd.DataFrame()
+        # tc_vec_train = tc_vec_train.assign(p1 = (code_train_prob['cp1']+text_train_prob['p1'])/2)
+        # tc_vec_train = tc_vec_train.assign(p2 = (code_train_prob['cp2']+text_train_prob['p2'])/2)
+        # tc_vec_train = tc_vec_train.assign(p3 = (code_train_prob['cp3']+text_train_prob['p3'])/2)
+        # tc_vec_train = tc_vec_train.assign(p4 = (code_train_prob['cp4']+text_train_prob['p4'])/2)
+        # tc_vec_train = tc_vec_train.assign(p5 = (code_train_prob['cp5']+text_train_prob['p5'])/2)
+        tc_vec_train = pd.concat([code_train_prob,text_train_prob], axis=1)
+        tc_vec_test = pd.DataFrame()
+        # tc_vec_test = tc_vec_test.assign(p1 = (code_test_prob['cp1']+text_test_prob['p1'])/2)
+        # tc_vec_test = tc_vec_test.assign(p2 = (code_test_prob['cp2']+text_test_prob['p2'])/2)
+        # tc_vec_test = tc_vec_test.assign(p3 = (code_test_prob['cp3']+text_test_prob['p3'])/2)
+        # tc_vec_test = tc_vec_test.assign(p4 = (code_test_prob['cp4']+text_test_prob['p4'])/2)
+        # tc_vec_test = tc_vec_test.assign(p5 = (code_test_prob['cp5']+text_test_prob['p5'])/2)
+        tc_vec_test = pd.concat([code_test_prob,text_test_prob], axis=1)
+        tcp2_train5,tcp2_test5, acc, classifier_tc_mlp2s5_vec = MLPmodel(tc_vec_train, df_train[i], tc_vec_test, df_test[i])
+
+        print("*** Stage Two - Text + Code  - "+i+"3 ***")
+
+        tcp2_train3,tcp2_test3, acc, classifier_tc_mlp2s3 = MLPmodel(tc_vec_train,  df_train[i+'3'], tc_vec_test, df_test[i+'3'])
+        
+        print("************ CODE  + TEXT + METADATA*************")         
+        print("*** Stage Two - Text + Code +Metadata - "+i+"5 ***")
+
+        
+        tcm_vec_train = pd.concat([code_train_prob ,text_train_prob,m_vec_train], axis=1)
+        tcm_vec_train.to_excel(CHECK1_XL)
+        tcm_vec_test = pd.concat([code_test_prob,text_test_prob,m_vec_test], axis=1)
+        tcm_vec_test.to_excel(CHECK2_XL)
+        tcmp2_train5,tcmp2_test5, acc, classifier_tcm_mlp2s5_vec = MLPmodel(tcm_vec_train, df_train[i], tcm_vec_test, df_test[i])
+
+        print("*** Stage Two - Text + Code + Metadata  - "+i+"3 ***")
+
+        tcmp2_train3,tcmp2_test3, acc, classifier_tcm_mlp2s3 = MLPmodel(tcm_vec_train,  df_train[i+'3'], tcm_vec_test, df_test[i+'3'])
        
-        # Single stage
-#        train_x_1s = hstack((train_x,df_train['Files Changed'].astype(float).values[:, None], df_train['nAdditions'].astype(float).values[:, None], df_train['nDeletions'].astype(float).values[:, None], df_train['Parents'].astype(float).values[:, None] ,df_train['nWords'].astype(float).values[:, None]))
-#        print(train_x_1s)
-#        test_x_1s = hstack((test_x,df_test['Files Changed'].astype(float).values[:, None], df_test['nAdditions'].astype(float).values[:, None], df_test['nDeletions'].astype(float).values[:, None], df_test['Parents'].astype(float).values[:, None], df_test['nWords'].astype(float).values[:, None]))
-##        print("*** MLP Classifier - One stage - All features - "+i+"5 ***")
-#        p_train_1s,p_test_1s, acc, classifier = RFCmodel(train_x_1s, df_train[i+' '], test_x_1s, df_test[i+' '], LCurve = False)
-#        acuracy.append(["MLP Classifier - One stage - All features - "+i+"5", float(acc), classifier])
-#        print("*** MLP Classifier - One stage - All features - "+i+"3 ***")
-#        p_train3_1s,p_test3_1s, acc, classifier_mlp = MLPmodel(train_x_1s, df_train[i+'3'], test_x_1s, df_test[i+'3'], LCurve = True)
-#        acuracy.append(["MLP Classifier - One stage - All features - "+i+"3", float(acc), classifier])
-        
-        '''Random Forest'''
-#        print("************ Random Forest *************")
-#        #Stage 1  
-##        print("*** RF Classifier - One stage - "+i+"5 ***")
-##        p_train,p_test,acc, classifier = RFCmodel(train_x, df_train[i+' '], test_x, df_test[i+' '])
-##        acuracy.append(["RF Classifier - One stage - "+i+"5", float(acc), classifier])
-#        print("*** RF Classifier - One stage - "+i+"3 ***")
-#        p_train2,p_test2,acc, classifier = RFCmodel(train_x, df_train[i+'3'], test_x, df_test[i+'3'])
-#        acuracy.append(["RF Classifier - One stage - "+i+"3", float(acc), classifier])
-#        
-#        #Stage 2
-#        df_train_prob = pd.DataFrame(p_train2, columns = ['p1','p2','p3'])
-#        train_x_s2 = pd.concat([df_train_prob,df_train['Files Changed'],df_train['nAdditions'],df_train['nDeletions'],df_train['Parents'],df_train['nWords']], axis=1)
-#        df_test_prob = pd.DataFrame(p_test2, columns = ['p1','p2','p3'])
-#        test_x_s2 = pd.concat([df_test_prob,df_test['Files Changed'],df_test['nAdditions'],df_test['nDeletions'],df_test['Parents'],df_test['nWords']], axis=1)
-#        print("*** RF Classifier - Two stage - "+i+"3 ***")
-#        p_train_s2,p_test_s2,acc, classifier = RFCmodel(train_x_s2, df_train[i+'3'], test_x_s2, df_test[i+'3'], LCurve = False)
-#        acuracy.append(["RF Classifier - Two stage - "+i+"3", float(acc), classifier])
-#        
-#        print("*** RF stage  one and MLP stage 2 - Two stage - "+i+"3 ***")
-#        p_train_s2,p_test_s2,acc, classifier = MLPmodel(train_x_s2, df_train[i+'3'], test_x_s2, df_test[i+'3'], LCurve = False)
-#        acuracy.append(["RF stage  one and MLP stage 2 - Two stage - "+i+"3", float(acc), classifier])        
-#        # Single stage
-##        print("*** RF Classifier - One stage - All features - "+i+"5 ***")
-##        p_train_1s,p_test_1s, acc, classifier = RFCmodel(train_x_1s, df_train[i+' '], test_x_1s, df_test[i+' '], LCurve = False)
-##        acuracy.append([" RF Classifier - One stage - All features - "+i+"5", float(acc), classifier]) 
-#        print("*** RF Classifier - One stage - All features - "+i+"3 ***")
-#        p_train3_1s,p_test3_1s, acc, classifier = RFCmodel(train_x_1s, df_train[i+'3'], test_x_1s, df_test[i+'3'], LCurve = True)
-#        acuracy.append(["RF Classifier - One stage - All features - "+i+"3", float(acc), classifier])  
-#        #Print Max accuracy scores and models
-        
-        p_classify5 = classifier_mlp1s5.predict_proba(word_features)
-        df_classify_prob = pd.DataFrame(p_classify5, columns = [i+'p1',i+'p2',i+'p3',i+'p4',i+'p5'])
-        classify_x_s1 = pd.DataFrame(pd.concat([df_classify_prob,dataframe_classify['Files'],dataframe_classify['Added'],dataframe_classify['Deleted'],dataframe_classify['Parents'],dataframe_classify['nWords']], axis=1) ).fillna(0)
-        p_classify_s2  = classifier_mlp2s5.predict_proba(classify_x_s1)
-        classify_x_s2  = pd.DataFrame(p_classify_s2, columns = [i+'s2p1',i+'s2p2',i+'s2p3'])
-        
-        df_classify = pd.concat([df_classify, classify_x_s2], axis=1)
-        
-        macc = max(acuracy, key=lambda x: x[1])
-        print("MAX ACCURACY - = ",macc)
-        macc_l.append([macc[0],macc[1],macc[2]]) 
-    
 
-    df_write = pd.concat([df_write,df_classify], axis=1)
-    df_write.to_excel(COMMIT2_XLSX)   
-    print(macc_l)
-#        if macc[1] > 0.5: return
-    
-        #Run untill max accuracy in 70%
-#    df_classify = hstack((word_features, dataframe_classify['nWords'].astype(float).values[:, None]))
 if __name__ == '__main__':
   main()
   

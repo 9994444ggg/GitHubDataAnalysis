@@ -16,7 +16,7 @@ from poo_ghmodules import ghparse_row
 import pandas as pd
 import numpy as np
 import requests
-PW_CSV = 'C:\\Users\pmedappa\Dropbox\HEC\Python\PW\PW_GitHub3.csv'
+
 LOG_CSV = 'C:\\Data\\092019 CommitInfo\\RepoCommit_log.csv'
 
 def run_query(name, owner, NEWREPO_xl): 

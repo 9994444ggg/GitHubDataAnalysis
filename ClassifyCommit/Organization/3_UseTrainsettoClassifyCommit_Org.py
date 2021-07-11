@@ -10,41 +10,25 @@ This code built on earlier code uses an existing trainset to classify commits (n
 import pandas as pd
 import numpy as np
 import ast
-from time import time
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.utils import shuffle #To shuffle the dataframe
 from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
-from scipy.sparse import hstack
+
 import matplotlib.pyplot as plt
 from sklearn.model_selection import learning_curve
 
 
 TRAIN_CSV = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Commit Creativity - Train3_Details.xlsx'
-TRAIN_SET = r'C:/Users/pmedappa/Dropbox\\Data\\092019 CommitInfo\Classifiers\Classifier 66 62\Trainset.xlsx'
-TEST_SET = r'C:/Users/pmedappa/Dropbox\\Data\\092019 CommitInfo\Classifiers\Classifier 66 62\Testset.xlsx'
-LABELFULL_CSV = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Trainout.csv'
-TRAINSET_XL = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Trainset.xlsx'
-TESTSET_XL = r'C:/Users/pmedappa/Dropbox/HEC/Project 5 - Roles and Coordination/Data/ML/Testset.xlsx'
-COMMIT_XLSX =r"C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/RepoCommit6001_6570_1.xlsx"
-COMMIT2_XLSX =r"C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit6001_6570_1.xlsx"
+TRAIN_SET = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\Classifiers\Classifier 66 62\Trainset.xlsx'
+TEST_SET = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\Classifiers\Classifier 66 62\Testset.xlsx'
+LABELFULL_CSV = r'C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\Classifiers\ML/Trainout.csv'
 
-"""
-REPOCOMMIT_LIST =[
-                   "C:/Data/092019 CommitInfo/RepoCommit1_287_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit288_500_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit501_1000_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit1001_1500_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit1501_2000_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit2002_2500_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit2501_3250_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit3251_4000_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit4001_5000_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit5001_5202_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit5203_6000_1.xlsx",
-                    "C:/Data/092019 CommitInfo/RepoCommit6001_6570_1.xlsx"
-                  ] """
+COMMIT_XLSX =r"C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\Organization_Specific\microsoft\microsoft_commit_EMPTY.xlsx"
+COMMIT2_XLSX =r"C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\Organization_Specific\microsoft\Classified\classified_microsoft_commit_EMPTY.xlsx"
+
+
 def plot_learning_curve_std(estimator, X, y):
     """
     Generate a simple plot of the test and training learning curve.
@@ -136,37 +120,71 @@ def getnoelements(x):
     return no_parents
 
 def geticommit(x):
-    text_file = ['txt','md','doc','docx','png','gif','jpg','avi','mpg','ppt','pptx']
-    if pd.isna(x['PINDEX']) and pd.notna(x['OPEN_ISSUES']):
-        try:
-            # Check for EOL issues
-            files = ast.literal_eval(x['OPEN_ISSUES'])
-        except:
-            return pd.Series([np.NaN,np.NaN,np.NaN,np.NaN,np.NaN,np.NaN], index=['Comments','Message','Added','Deleted','Parents','Files'])
-
-        for i in files:
-            l = i.split('.')
-            if len(l) > 1:
-                if l[1].lower() not in text_file:
-                    return pd.Series([x['PUSHED_DATE'],x['MAIN_LANGUAGE'],x['NO_LANGUAGES'],x['SCRIPT_SIZE'],x['STARS'],x['SUBSCRIPTIONS']], index=['Comments','Message','Added','Deleted','Parents','Files'])
-
-    return pd.Series([np.NaN,np.NaN,np.NaN,np.NaN,np.NaN,np.NaN], index=['Comments','Message','Added','Deleted','Parents','Files'])
+    """Find commit with code and file changes"""
+    if pd.isna(x['repo_id']) and x['commit_changedFiles'] > 0 and x['commit_message']:
+        if x['commit_additions'] > 0 or  x['commit_deletions'] > 0:
+            return pd.Series([x['commit_oid'],x['commit_authors_totalCount'],x['commit_message'],x['commit_additions'],x['commit_deletions'],x['commit_parents_totalCount'],x['commit_changedFiles']], index=['commit_oid', 'commit_authors_totalCount','commit_message','commit_additions','commit_deletions','commit_parents_totalCount','commit_changedFiles'])
+        
+    return pd.Series([np.NaN,np.NaN,np.NaN,np.NaN,np.NaN,np.NaN,np.NaN], index=['commit_oid','commit_authors_totalCount','commit_message','commit_additions','commit_deletions','commit_parents_totalCount','commit_changedFiles'])
     
 def getVDF(TRAIN_CSV):
     """Get data from the training sample CSV and perform various cleaning and data preprocessing"""
-    dataframe = pd.read_excel(TRAIN_CSV, sep=",",error_bad_lines=False,header= 0,  encoding = "Latin1")
+    dataframe = pd.read_excel(TRAIN_CSV,header= 0)
 
     dataframe = dataframe.drop(axis=1,columns=['Commit URL', 'Sha','URL','Author Name','Author Email','Commit Date','Verification','Author Date'])
     # Shuffle the dataframe
     dataframe = shuffle(dataframe)
     # Encode type of commit
     dataframe = dataframe.assign(CommitType = lambda x: x['Type of Commit (Primary)'].str.split().str.get(0).str.strip(','))
-    dataframe.CommitType = dataframe.CommitType.replace({'Feature': 1,
+    dataframe['CommitType_feature'] = dataframe.CommitType.replace({'Feature': 1,
+                                                                       'Bug/Issue': 0,
+                                                                       'Documentation': 0,
+                                                                       'Peer': 0,
+                                                                       'Process': 0,
+                                                                       'Testing': 0})
+
+    dataframe['CommitType_bug'] = dataframe.CommitType.replace({'Feature': 0,
+                                                                       'Bug/Issue': 1,
+                                                                       'Documentation': 0,
+                                                                       'Peer': 0,
+                                                                       'Process': 0,
+                                                                       'Testing': 0})
+
+    dataframe['CommitType_doc'] = dataframe.CommitType.replace({'Feature': 0,
+                                                                       'Bug/Issue': 0,
+                                                                       'Documentation': 1,
+                                                                       'Peer': 0,
+                                                                       'Process': 0,
+                                                                       'Testing': 0})
+
+    dataframe['CommitType_peer'] = dataframe.CommitType.replace({'Feature': 0,
+                                                                       'Bug/Issue': 0,
+                                                                       'Documentation': 0,
+                                                                       'Peer': 1,
+                                                                       'Process': 0,
+                                                                       'Testing': 0})
+
+    dataframe['CommitType_process'] = dataframe.CommitType.replace({'Feature': 0,
+                                                                       'Bug/Issue': 0,
+                                                                       'Documentation': 0,
+                                                                       'Peer': 0,
+                                                                       'Process': 1,
+                                                                       'Testing': 0})
+
+    dataframe['CommitType_test'] = dataframe.CommitType.replace({'Feature': 0,
+                                                                       'Bug/Issue': 0,
+                                                                       'Documentation': 0,
+                                                                       'Peer': 0,
+                                                                       'Process': 0,
+                                                                       'Testing': 1})
+
+    dataframe['CommitType'] = dataframe.CommitType.replace({'Feature': 1,
                                                                        'Bug/Issue': 2,
                                                                        'Documentation': 3,
                                                                        'Peer': 4,
                                                                        'Process': 5,
                                                                        'Testing': 6})
+
     dataframe = dataframe.drop(axis=1,columns=['Type of Commit (Primary)','Optional Type of Commit (Secondary)'])
     # Find number of parents
     dataframe['Parents'] = dataframe['Parents'].map(getnoelements)
@@ -191,7 +209,7 @@ def getVDF(TRAIN_CSV):
     dataframe['Usefulness3'] = np.select(conditions, choices, default='Medium')
     #Create count of words feature
     dataframe = dataframe.assign(nWords = lambda x : x['Description'].str.split().str.len() )
-    dataframe_sd = dataframe.drop(dataframe[dataframe.CommitType.astype(int) == 3].index)
+    dataframe_sd = dataframe.drop(dataframe[dataframe.CommitType.astype(int) == 3].index) #drop document type
 
     return dataframe, dataframe_sd
 
@@ -245,15 +263,13 @@ def main():
     # vector_dataframe.to_csv(LABELFULL_CSV)
     #Split vector data frame into training and test samples
     # df_train, df_test = train_test_split(vector_dataframe, test_size=0.2)
-    df_train = pd.read_excel(TRAIN_SET, sep=",",error_bad_lines=False,header= 0)
-    df_test = pd.read_excel(TEST_SET, sep=",",error_bad_lines=False,header= 0)
+    df_train = pd.read_excel(TRAIN_SET,header= 0)
+    df_test = pd.read_excel(TEST_SET,header= 0)
 
     #Reset the indices for merging other features later on
     df_train=df_train.reset_index()
     df_test = df_test.reset_index()
-    #Create new CSV represnting the training and testing samples
-    df_train.to_excel(TRAINSET_XL)
-    df_test.to_excel(TESTSET_XL)
+
     #Convert description text into a vetor of features. Train_x,test_x are in sparse matrix format
     train_x, test_x, word_vectorizer = vectordsc(vector_dataframe['Description'], df_train['Description'], df_test['Description'] )
     acuracy = list()
@@ -262,14 +278,17 @@ def main():
     df_classify = pd.DataFrame()
     df_write = pd.DataFrame()
 
-    df_write = pd.read_excel(COMMIT_XLSX,error_bad_lines=False,header=0)
+    df_write = pd.read_excel(COMMIT_XLSX,header=0)
     print(COMMIT_XLSX," rows ",df_write.shape[0])
 
     dataframe_classify = df_write.apply(geticommit, axis =1 )
 
-    dataframe_classify = dataframe_classify.assign(nWords = lambda x : x['Message'].str.split().str.len() )
-    word_features = word_vectorizer.transform(dataframe_classify['Message'].astype(str))
+    dataframe_classify = dataframe_classify.assign(nWords = lambda x : x['commit_message'].astype(str).str.split().str.len() )
+    print(dataframe_classify)
+    word_features = word_vectorizer.transform(dataframe_classify['commit_message'].astype(str))
     
+
+
     for i in ["Novelty", "Usefulness"]:
         '''MLPClassifier'''
         print("************ MLP Classifier *************")
@@ -277,7 +296,7 @@ def main():
         del macc[:] 
         #Stage 1  
         print("*** MLP Classifier - One stage - "+i+"5 ***")
-        p_train5,p_test5, acc, classifier_mlp1s5 = MLPmodel(train_x, df_train[i], test_x, df_test[i])
+        p_train5,p_test5, acc, classifier_mlp1s5 = MLPmodel(train_x, df_train[i], test_x, df_test[i]) #classify on description
         #Stage 2
         df_train_prob = pd.DataFrame(p_train5, columns = ['p1','p2','p3','p4','p5'])
         train_x_s2 = pd.concat([df_train_prob,df_train['Files Changed'],df_train['nAdditions'],df_train['nDeletions'],df_train['Parents'],df_train['nWords']], axis=1)
@@ -304,9 +323,10 @@ def main():
         print("MLP Classifier - Two stage - "+i+"3 ", acc)
     
         # USE 1S-5p, 2S - 3p MLP classifier for classifying the commits
+    
         p_classify5 = classifier_mlp1s5.predict_proba(word_features)
         df_classify_prob = pd.DataFrame(p_classify5, columns = [i+'p1',i+'p2',i+'p3',i+'p4',i+'p5'])
-        classify_x_s1 = pd.DataFrame(pd.concat([df_classify_prob,dataframe_classify['Files'],dataframe_classify['Added'],dataframe_classify['Deleted'],dataframe_classify['Parents'],dataframe_classify['nWords']], axis=1) ).fillna(0)
+        classify_x_s1 = pd.DataFrame(pd.concat([df_classify_prob,dataframe_classify['commit_changedFiles'],dataframe_classify['commit_additions'],dataframe_classify['commit_deletions'],dataframe_classify['commit_parents_totalCount'],dataframe_classify['nWords']], axis=1) ).fillna(0)
         p_classify_s2  = classifier_mlp2s5.predict_proba(classify_x_s1)
         classify_x_s2  = pd.DataFrame(p_classify_s2, columns = [i+'s2p1',i+'s2p2',i+'s2p3'])
         
@@ -315,12 +335,45 @@ def main():
         macc = max(acuracy, key=lambda x: x[1])
         print("MAX ACCURACY - = ",macc)
         macc_l.append([macc[0],macc[1],macc[2]]) 
+
+    for i in ["CommitType_feature","CommitType_bug","CommitType_doc","CommitType_peer","CommitType_process","CommitType_test"]:
+        '''MLPClassifier'''
+        print("************ MLP Classifier *************")
+        del acuracy[:] 
+        del macc[:] 
+        #Stage 1  
+        print("*** MLP Classifier - One stage - "+i+" ***")
+        p_train5,p_test5, acc, classifier_mlp1s5 = MLPmodel(train_x, df_train[i], test_x, df_test[i]) #classify on description
+        #Stage 2
+        df_train_prob = pd.DataFrame(p_train5, columns = ['p1','p2'])
+        train_x_s2 = pd.concat([df_train_prob,df_train['Files Changed'],df_train['nAdditions'],df_train['nDeletions'],df_train['Parents'],df_train['nWords']], axis=1)
+        df_test_prob = pd.DataFrame(p_test5, columns = ['p1','p2'])
+        test_x_s2 = pd.concat([df_test_prob,df_test['Files Changed'],df_test['nAdditions'],df_test['nDeletions'],df_test['Parents'],df_test['nWords']], axis=1)
+        print("*** MLP Classifier - Two stage - "+i+" ***")
+        p_train_s2,p_test_s2, acc, classifier_mlp2s5 = MLPmodel(train_x_s2, df_train[i], test_x_s2, df_test[i], LCurve = False)
+        acuracy.append(["MLP Classifier - Two stage - "+i, float(acc),classifier_mlp1s5, classifier_mlp2s5])
+        print("MLP Classifier - Two stage - "+i, acc)
+
+    
+        # USE 1S-5p, 2S - 3p MLP classifier for classifying the commits
+    
+        p_classify5 = classifier_mlp1s5.predict_proba(word_features)
+        df_classify_prob = pd.DataFrame(p_classify5, columns = [i+'p1',i+'p2'])
+        classify_x_s1 = pd.DataFrame(pd.concat([df_classify_prob,dataframe_classify['commit_changedFiles'],dataframe_classify['commit_additions'],dataframe_classify['commit_deletions'],dataframe_classify['commit_parents_totalCount'],dataframe_classify['nWords']], axis=1) ).fillna(0)
+        p_classify_s2  = classifier_mlp2s5.predict_proba(classify_x_s1)
+        classify_x_s2  = pd.DataFrame(p_classify_s2, columns = [i+'s2p1',i+'s2p2'])
+        
+        df_classify = pd.concat([df_classify, classify_x_s2], axis=1)
+        
+        macc = max(acuracy, key=lambda x: x[1])
+        print("MAX ACCURACY - = ",macc)
+        macc_l.append([macc[0],macc[1],macc[2]])
     
     print(df_write.shape[0],df_classify.shape[0])
     df_write = pd.concat([df_write,df_classify], axis=1)
     print(df_write.shape[0])
     df_write.to_excel(COMMIT2_XLSX)   
-    print(macc_l)
+
 
 if __name__ == '__main__':
   main()

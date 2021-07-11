@@ -11,23 +11,25 @@ import pandas as pd
 import numpy as np
 import ast
 
-REPOCOMMIT_LIST =[
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit1_287_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit288_500_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit501_1000_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit1001_1500_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit1501_2000_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit2002_2500_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit2501_3250_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit3251_4000_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit4001_5000_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit5001_5202_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit5203_6000_1.xlsx",
-                    "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit6001_6570_1.xlsx"
+
+
+REPOCOMMIT_LIST =[                   
+                    r"C:\Users\pmedappa\Dropbox\Data\092019 CommitInfo\ClassifiedRepoCommit\ClassifiedRepoCommit1_287_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit288_500_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit501_1000_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit1001_1500_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit1501_2000_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit2002_2500_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit2501_3250_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit3251_4000_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit4001_5000_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit5001_5202_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit5203_6000_1.xlsx",
+                    "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/ClassifiedRepoCommit6001_6570_1.xlsx"
                   ] 
-MC_XLSX = "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/MC_RepoCommit1_287_1.xlsx"
-COMMITERS_XLSX = "C:/Data/092019 CommitInfo/Contributors_monthwise/Final_COL_MC_RepoCommit.xlsx"
-TEMP= "C:/Data/092019 CommitInfo/ClassifiedRepoCommit/temp.xlsx"
+MC_XLSX = "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/28072020_MC_RepoCommit.xlsx"
+COMMITERS_XLSX = "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/Contributors_monthwise/Final_COL_MC_RepoCommit.xlsx"
+TEMP= "C:/Users/pmedappa/Dropbox/Data/092019 CommitInfo/ClassifiedRepoCommit/temp.xlsx"
 def consolidate_prob(x, a1, a2,a3):
     "Aggregae the probabilities calculated into a single construct"
     text_file = ['txt','md','doc','docx','png','gif','jpg',"csv","xlsx"]
@@ -50,12 +52,24 @@ def consolidate_commits(df):
     """ Consolidate commits monthly"""
     if int(df.shape[0]) <1: return pd.DataFrame()
     df.dropna(subset=['con_novelty'],inplace = True)
-    df2 = df.groupby('c_month')['con_novelty', 'con_usefulness','Noveltys2p1','Noveltys2p2','Noveltys2p3','Usefulnesss2p1','Usefulnesss2p2','Usefulnesss2p3'].mean()
-    df2= pd.concat([df2, df.groupby('c_month')['con_novelty'].count(),df.groupby('c_month')['SIZE'].nunique()], axis = 1)
-    
+    df=df.replace('Not Found', 0)
+    df=df.fillna(0)
+
+    df['documentation'] = pd.Series([1 if (('readme' in str(x).lower()) or ('document' in str(x).lower())) else 0 for x in df['MAIN_LANGUAGE']])
+    df['peer'] = pd.Series([1 if 'merge' in str(x).lower() else 0 for x in df['MAIN_LANGUAGE']])
+    df['bug'] = pd.Series([1 if (('bug' in str(x).lower()) or ('fix' in str(x).lower())) else 0 for x in df['MAIN_LANGUAGE']])
+    df['feature'] = pd.Series([1 if (('feature' in str(x).lower()) or ('patch' in str(x).lower()) or ('update' in str(x).lower()) or ('function' in str(x).lower())) else 0 for x in df['MAIN_LANGUAGE']])
+    df['test'] = pd.Series([1 if (('test' in str(x).lower()) or ('debug' in str(x).lower()) or ('check' in str(x).lower())) else 0 for x in df['MAIN_LANGUAGE']])
+
+    df2 = df.groupby('c_month')['con_novelty', 'con_usefulness','Noveltys2p1','Noveltys2p2','Noveltys2p3','Usefulnesss2p1','Usefulnesss2p2','Usefulnesss2p3','NO_LANGUAGES','SCRIPT_SIZE','STARS','SUBSCRIPTIONS'].mean()
+    df2= pd.concat([df2, df.groupby('c_month')['con_novelty'].count(),df.groupby('c_month')['SIZE'].nunique(),df.groupby('c_month')['documentation','peer','bug','feature','test'].sum()], axis = 1)
     # Change index from c_months 
+    
     df2= df2.reset_index()
-    df2.columns = ['nc_month','m_novelty','m_usefulness','m_Noveltys2p1','m_Noveltys2p2','m_Noveltys2p3','m_Usefulnesss2p1','m_Usefulnesss2p2','m_Usefulnesss2p3','c_count','c_contributors']
+    if df2.shape[0] != 0:
+        df2.columns = ['nc_month','m_novelty','m_usefulness','m_Noveltys2p1','m_Noveltys2p2','m_Noveltys2p3','m_Usefulnesss2p1','m_Usefulnesss2p2','m_Usefulnesss2p3','mavg_added','mavg_deleted','mavg_parents','mavg_files','c_count','c_contributors','documentation','peer','bug','feature','test']
+    else:
+        df2 = pd.DataFrame(columns=['nc_month','m_novelty','m_usefulness','m_Noveltys2p1','m_Noveltys2p2','m_Noveltys2p3','m_Usefulnesss2p1','m_Usefulnesss2p2','m_Usefulnesss2p3','mavg_added','mavg_deleted','mavg_parents','mavg_files','c_count','c_contributors','documentation','peer','bug','feature','test'])
 
     return df2
 
@@ -159,7 +173,7 @@ def main():
         repo_commits = pd.DataFrame()
         write_commits = pd.DataFrame()
         indx = df_commit.columns
-        indx = indx.append(pd.Index(['end_colab','end_cont','event_month','month','start_colab','start_cont','m_novelty','m_usefulness','m_Noveltys2p1','m_Noveltys2p2','m_Noveltys2p3','m_Usefulnesss2p1','m_Usefulnesss2p2','m_Usefulnesss2p3','c_count','c_contributors']))
+        indx = indx.append(pd.Index(['end_colab','end_cont','event_month','month','start_colab','start_cont','m_novelty','m_usefulness','m_Noveltys2p1','m_Noveltys2p2','m_Noveltys2p3','m_Usefulnesss2p1','m_Usefulnesss2p2','m_Usefulnesss2p3','mavg_added','mavg_deleted','mavg_parents','mavg_files','c_count','c_contributors','documentation','peer','bug','feature','test']))
         
     
         repo_df = df_commit.dropna(subset=['PINDEX'])
@@ -172,13 +186,14 @@ def main():
         df_commiters[0] = df_commiters[0].fillna(method='ffill')
         
         for i,row in repo_df.iterrows():
+            print(row['REPO_ID'])
             repo_commits = df_commit[df_commit['n_REPO_ID']==row['REPO_ID']]
             
             repo_commits = repo_commits.iloc[1:]
     
             df_mcommit = consolidate_commits(repo_commits)
             write_commits = write_commits.append(row, sort = False, ignore_index = True)
-            
+
             
             # get the monthwise commiters for the repo 
             repo_commiters = df_commiters[df_commiters[0].astype(int).astype(str)==row['REPO_ID']]
@@ -191,14 +206,13 @@ def main():
             else:
                 print("CHECK REPO FOR COMMITS ", row['REPO_ID'])
                
-                    
+                  
             write_commits = write_commits.append(repo_commiters, sort = False, ignore_index = True)                               
-    
+
         write_commits = write_commits.reindex(indx, axis=1)
         write_commits = write_commits.drop(axis=1,columns=['REPO_ID.1', 'yhat','opt_deg_sup_ind','opt_deg_sup_org','Unnamed: 104','UNKNOWN','c_month','c_day','con_novelty','con_usefulness','Noveltys2p1',	'Noveltys2p2',	'Noveltys2p3',	'Usefulnesss2p1',	'Usefulnesss2p2',	
-                                                           'Usefulnesss2p3','PUSHED_0917', 'STARS_0917', 'SUBSCRIBERS_0917', 'FORKS_0917', 'SIZE_0917	', 'LICENCE_0917', 'PUSHED_1017	', 'STARS_1017', 'SUBSCRIBERS_1017	', 'FORKS_1017', 'SIZE_1017', 'LICENCE_1017', 'int_sup', 
+                                                           'Usefulnesss2p3','PUSHED_0917', 'STARS_0917', 'SUBSCRIBERS_0917', 'FORKS_0917', 'SIZE_0917', 'LICENCE_0917','STARS_1017', 'SUBSCRIBERS_1017', 'FORKS_1017', 'SIZE_1017', 'LICENCE_1017','int_sup', 
                                                            'int_sup_sq', 'month_jan_flag', 'month_feb_flag', 'month_mar_flag', 'month_apr_flag', 'month_may_flag', 'month_jun_flag','script_size_kb', 'script_size_mb', 'logsize_kb'])
-
         append_df_to_excel(MC_XLSX, write_commits,index=False)
         print("number of rows : ", write_commits.shape[0])
         
